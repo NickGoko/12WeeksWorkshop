@@ -1,0 +1,48 @@
+Description: Introduction to CloudFormation SFID - Elastic Compute Cloud (EC2)
+
+
+Parameters:
+  PublicSubnet:
+    Description: Select a Public Subnet created in the "VPC for SFID CFN" Lab (Hint - Search for "SFID")
+    Type: 'AWS::EC2::Subnet::Id'
+  SecurityGroup:
+    Description: Select the Security Group created in the "VPC for SFID CFN" Lab (Hint - Search for "SFID")
+    Type: 'AWS::EC2::SecurityGroup::Id'
+
+Resources:
+# Create EC2 Linux
+  WebServerInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: "ami-0331ebbf81138e4de"
+      InstanceType: t3a.micro
+      Tags:
+          - Key: Name
+            Value: Web Server for IMD
+      UserData: 
+        Fn::Base64:
+          !Sub |
+          #!/bin/sh
+          yum -y install httpd
+          chkconfig httpd on
+          systemctl start httpd
+          echo '<html><center><text="#252F3E" style="font-family: Amazon Ember"><h1>AWS CloudFormation is Fun !!!</h1>' > /var/www/html/index.html
+          echo '<h3><img src="https://d0.awsstatic.com/logos/powered-by-aws.png"></h3></html>' >> /var/www/html/index.html
+
+      NetworkInterfaces:
+        - GroupSet:
+            - !Ref SecurityGroup
+          AssociatePublicIpAddress: 'true'
+          DeviceIndex: '0'
+          DeleteOnTermination: 'true'
+          SubnetId: !Ref PublicSubnet
+
+Outputs:
+  PublicDNS:
+    Value: !Join 
+      - ''
+      - - 'http://'
+        - !GetAtt 
+          - WebServerInstance
+          - PublicDnsName
+    Description: Web Host Public URL
